@@ -1,0 +1,35 @@
+.header {
+    background-color: darkblue;
+}
+
+.top_of_header {
+    display: flex;
+    color: #E5E7EB;
+    font-size: 18px;
+    margin-left: 40px;
+    margin-right: 40px;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.background {
+    background-color: aliceblue;
+    height: 1000px;
+    display: flex;
+    flex-direction: column;
+}
+
+.body {
+    padding-top: 70px;
+    padding-left: 20px;
+    font-family: sans-serif;
+}
+
+.button {
+    width: 500px;
+    height: 50px;
+    background-color: #E5E7EB;
+    border-radius: 8px;
+    border-width: 1px;
+    margin-top: 50px;
+    margin-left: 50px;
+}
