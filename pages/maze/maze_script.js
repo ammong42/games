@@ -61,12 +61,28 @@ function createPlayer(x, y) {
     }
     
     this.move = function() {
+        let oldX = this.x;
+        let oldY = this.y;
         this.x += (playerChangeX * playerSpeed);
         this.y += (playerChangeY * playerSpeed);
         if (this.x < 0) {this.x = 0};
         if (this.x + playerWidth > canvasWidth) {this.x = canvasWidth - playerWidth};
         if (this.y < 0) {this.y = 0};
         if (this.y + playerHeight > canvasHeight) {this.y = canvasHeight - playerHeight};
+        for (let wall of walls) {
+            let horizontalCollision = this.x < wall[0] + wall[2] && this.x + playerWidth > wall[0];
+            let verticalCollision = this.y < wall[1] + wall[3] && this.y + playerHeight > wall[1];
+            if (horizontalCollision && verticalCollision) {
+                let collidesWithoutMovingX = oldX < wall[0] + wall[2] && oldX + playerWidth > wall[0];
+                if (collidesWithoutMovingX) {
+                    this.y = oldY;
+                }
+                let collidesWithoutMovingY = oldY < wall[1] + wall[3] && oldY + playerHeight > wall[1];
+                if (collidesWithoutMovingY) {
+                    this.x = oldX;
+                }
+            }
+        }
     }
 }
 
