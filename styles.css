@@ -13,7 +13,7 @@
 
 .background {
     background-color: aliceblue;
-    height: 1000px;
+    height: 10000px;
     display: flex;
     flex-direction: column;
 }
