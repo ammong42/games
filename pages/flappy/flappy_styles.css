@@ -1,0 +1,19 @@
+.header {
+    background-color: darkblue;
+}
+
+.top_of_header {
+    display: flex;
+    color: #E5E7EB;
+    font-size: 18px;
+    margin-left: 40px;
+    margin-right: 40px;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+canvas {
+    border:2px solid black;
+    background-color: skyblue;
+    margin-top: 50px;
+    margin-left: 50px;
+}
