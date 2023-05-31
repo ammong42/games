@@ -17,3 +17,8 @@ canvas {
     margin-top: 50px;
     margin-left: 50px;
 }
+
+.hidden {
+  display : none;
+  background-color: transparent;
+}

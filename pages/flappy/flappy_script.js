@@ -9,31 +9,41 @@ let playerChangeY = 0;
 let pipeWidth = 100;
 let pipeGap = 150;
 
-let playerHit = false;
+let restartButtonX = 295;
+let restartButtonY = 320;
+let buttonWidth = 140;
+let buttonHeight = 50;
 
+let playerHit = false;
 let gameStarted = false;
-let gameCanRestart = false;
 let score = 0;
 let timer = 0;
+const HIGH_SCORE = "highScore";
+
+let playerImg = document.getElementById("playerImage");
 
 function showInstructions() {
     gameCanvas.start();
     ctx = gameCanvas.context;
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.fillStyle = "darkblue";
-    ctx.font = "20px Arial";
-    ctx.fillText("Press any key to start", 300, 290);
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText("Press any key to start", 260, 290);
     // draw player
+    /*
     ctx.fillStyle = "yellow";
     ctx.beginPath();
     ctx.arc(playerX, playerY, playerRadius, 0, Math.PI * 2, true);
     ctx.fill();
+    */
+    
+    ctx.drawImage(playerImg, playerX - playerRadius * 2, playerY - playerRadius * 1.7, playerImg.width / 6, playerImg.height / 6);
 }
 
 function startGame() {
     interval = setInterval(updateCanvas, 20);
     player = new createPlayer(playerY);
-    let randomHeight = Math.floor(Math.random() * 5) * 100 + 25;
+    let randomHeight = Math.floor(Math.random() * 4) * 100 + 75;
     firstPipe = new createPipe(randomHeight);
     pipes.push(firstPipe);
 }
@@ -57,18 +67,13 @@ window.onkeydown = function(e) {
     if (playerHit) {
         return;
     }
-    playerChangeY -= 10;
-    if (playerChangeY > -5) {
-        playerChangeY = -5;
-    }
-    if (playerChangeY < -10) {
-        playerChangeY = -10;
-    }
+   playerChangeY = -8.5;
 }
 
-window.onclick = function() {
+window.onclick = function(e) {
     if (playerHit) {
-        if (gameCanRestart) {
+        var mousePos = getMousePos(gameCanvas.canvas, e);
+        if (isInside(mousePos, restartButton)) {
             clearInterval(interval);
             playerChangeY = 0;
             pipes = [];
@@ -79,7 +84,6 @@ window.onclick = function() {
             gameStarted = false;
             showInstructions();
         }
-        return;
     }
 }
 
@@ -88,14 +92,18 @@ function createPlayer(y) {
 
     this.draw = function() {
         ctx = gameCanvas.context;
+        /*
         ctx.fillStyle = "yellow";
         ctx.beginPath();
         ctx.arc(playerX, this.y, playerRadius, 0, Math.PI * 2, true);
         ctx.fill();
+        */
+        ctx.drawImage(playerImg, playerX - playerRadius * 2, this.y - playerRadius * 1.7, playerImg.width / 6, playerImg.height / 6);
     }
 
     this.move = function() {
-        playerChangeY += .4;
+        playerChangeY += .5; //.4
+        if (playerChangeY > 8) playerChangeY = 8;
         this.y += playerChangeY;
         //check for collision with pipes
         if (playerHit) return;
@@ -104,8 +112,11 @@ function createPlayer(y) {
             let horizontalCollision = playerX + playerRadius > pipes[i].x && playerX - playerRadius < pipes[i].x + pipeWidth;
             if (verticalCollision && horizontalCollision) {
                 playerHit = true;
-                timer = 0;
             }
+        }
+        //check for collision with ground
+        if (this.y + playerRadius > canvasHeight) {
+            playerHit = true;
         }
     }
 }
@@ -143,13 +154,17 @@ function updateCanvas() {
     oneSecondTimer();
 
     if (playerHit) {
+        ctx.fillStyle = "orange";
+        ctx.fillRect(restartButtonX, restartButtonY, buttonWidth, buttonHeight);
+        ctx.fillRect(470, 320, 140, 50);
+
         ctx.fillStyle = "white";
         ctx.font = "40px Arial";
-        ctx.fillText(`Your score: ${score}`, canvasWidth / 2 - 110, canvasHeight / 2 - 100);
-        ctx.fillText(`High score: ?`, canvasWidth / 2 - 110, canvasHeight / 2 - 50);
-        if (gameCanRestart) {
-            ctx.fillText("Click to restart", canvasWidth / 2 - 110, canvasHeight / 2 + 30);
-        }
+        ctx.fillText(`Score: ${score}`, canvasWidth / 2 - 80, canvasHeight / 2 - 100);
+        ctx.fillText(`Best:   ${getHighScore()}`, canvasWidth / 2 - 80, canvasHeight / 2 - 50);
+        ctx.fillText("Restart", 300, 360);
+        ctx.fillText("Skins", 490, 360);
+
         return;
     }
 
@@ -157,24 +172,22 @@ function updateCanvas() {
 }
 
 function oneSecondTimer() {
+    if (playerHit) {
+        return;
+    }
     timer += .01;
     if (timer >=1) {
         timer = 0;
-        if (playerHit) {
-            gameCanRestart = true;
+
+        let randomHeight = Math.floor(Math.random() * 4) * 100 + 75;
+        newPipe = new createPipe(randomHeight);
+        pipes.push(newPipe);
+        if (pipes.length > 3) {
+            score++;
         }
-        else {
-            let randomHeight = Math.floor(Math.random() * 5) * 100 + 25;
-            newPipe = new createPipe(randomHeight);
-            pipes.push(newPipe);
-            if (pipes.length > 3) {
-                score++;
-            }
-            if (pipes.length > 4) {
-                pipes.shift();
-            }
+        if (pipes.length > 4) {
+            pipes.shift();
         }
-        
     }
 }
 
@@ -190,3 +203,31 @@ function drawScore() {
     ctx.font = "40px Arial";
     ctx.fillText(score, canvasWidth / 2, canvasHeight / 10);
 }
+
+function getHighScore() {
+    let highScore = localStorage.getItem(HIGH_SCORE) ?? 0;
+    if (score > highScore) {
+        localStorage.setItem(HIGH_SCORE, score);
+        return score;
+    }
+    return highScore;
+}
+
+function getMousePos(canvas, event) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+    };
+}
+
+function isInside(pos, rect) {
+    return pos.x > rect.x && pos.x < rect.x + rect.width && pos.y < rect.y + rect.height && pos.y > rect.y;
+}
+
+let restartButton = {
+    x: restartButtonX,
+    y: restartButtonY,
+    width: buttonWidth,
+    height: buttonHeight,
+};
