@@ -11,8 +11,20 @@ let pipeGap = 150;
 
 let restartButtonX = 295;
 let restartButtonY = 320;
+let skinsButtonX = 470;
+let skinsButtonY = 320;
+let playButtonX = 380;
+let playButtonY = 500;
 let buttonWidth = 140;
 let buttonHeight = 50;
+
+let selectionFirstRow = 50;
+let selectionSecondRow = 260;
+let selectionFirstColumn = 80;
+let selectionSecondColumn = 350;
+let selectionThirdColumn = 620;
+let selectionWidth = 200;
+let selectionHeight = 150;
 
 let playerHit = false;
 let gameStarted = false;
@@ -20,7 +32,14 @@ let score = 0;
 let timer = 0;
 const HIGH_SCORE = "highScore";
 
+let skinsPage = false;
+
+let skin = 0;
 let playerImg = document.getElementById("playerImage");
+let nerdImg = document.getElementById("nerdImage");
+let thirdImg = document.getElementById("thirdImage");
+let turdImg = document.getElementById("turdImage");
+let herdImg = document.getElementById("herdImage");
 
 function showInstructions() {
     gameCanvas.start();
@@ -29,20 +48,13 @@ function showInstructions() {
     ctx.fillStyle = "white";
     ctx.font = "40px Arial";
     ctx.fillText("Press any key to start", 260, 290);
-    // draw player
-    /*
-    ctx.fillStyle = "yellow";
-    ctx.beginPath();
-    ctx.arc(playerX, playerY, playerRadius, 0, Math.PI * 2, true);
-    ctx.fill();
-    */
-    
-    ctx.drawImage(playerImg, playerX - playerRadius * 2, playerY - playerRadius * 1.7, playerImg.width / 6, playerImg.height / 6);
+
+    player = new createPlayer(playerY);
+    player.draw();
 }
 
 function startGame() {
     interval = setInterval(updateCanvas, 20);
-    player = new createPlayer(playerY);
     let randomHeight = Math.floor(Math.random() * 4) * 100 + 75;
     firstPipe = new createPipe(randomHeight);
     pipes.push(firstPipe);
@@ -71,8 +83,43 @@ window.onkeydown = function(e) {
 }
 
 window.onclick = function(e) {
+    var mousePos = getMousePos(gameCanvas.canvas, e);
+    if (skinsPage) {
+        if (isInside(mousePos, birdSelection)) {
+            skin = 0;
+            drawSkinsPage();
+        }
+        if (isInside(mousePos, nerdSelection)) {
+            skin = 1;
+            drawSkinsPage();
+        }
+        if (isInside(mousePos, thirdSelection)) {
+            skin = 2;
+            drawSkinsPage();
+        }
+        if (isInside(mousePos, turdSelection)) {
+            skin = 3;
+            drawSkinsPage();
+        }
+        if (isInside(mousePos, herdSelection)) {
+            skin = 4;
+            drawSkinsPage();
+        }
+        if (isInside(mousePos, playButton)) {
+            clearInterval(interval);
+            playerChangeY = 0;
+            pipes = [];
+            timer = 0;
+            score = 0;
+            playerHit = false;
+            gameCanRestart = false;
+            gameStarted = false;
+            skinsPage = false;
+            showInstructions();
+        }
+        return;
+    }
     if (playerHit) {
-        var mousePos = getMousePos(gameCanvas.canvas, e);
         if (isInside(mousePos, restartButton)) {
             clearInterval(interval);
             playerChangeY = 0;
@@ -83,6 +130,11 @@ window.onclick = function(e) {
             gameCanRestart = false;
             gameStarted = false;
             showInstructions();
+        }
+        if (isInside(mousePos, skinsButton)) {
+            clearInterval(interval);
+            skinsPage = true;
+            drawSkinsPage();
         }
     }
 }
@@ -98,7 +150,22 @@ function createPlayer(y) {
         ctx.arc(playerX, this.y, playerRadius, 0, Math.PI * 2, true);
         ctx.fill();
         */
-        ctx.drawImage(playerImg, playerX - playerRadius * 2, this.y - playerRadius * 1.7, playerImg.width / 6, playerImg.height / 6);
+        switch(skin) {
+            case 1:
+                ctx.drawImage(nerdImg, playerX - playerRadius * 1.33, this.y - playerRadius * 1.15, playerImg.width / 9.4, playerImg.height / 9.4);
+                break;
+            case 2:
+                ctx.drawImage(thirdImg, playerX - playerRadius * 1.4, this.y - playerRadius * 1.35, playerImg.width / 9, playerImg.height / 8);
+                break;
+            case 3:
+                ctx.drawImage(turdImg, playerX - playerRadius * 1.3, this.y - playerRadius * 1.2, playerImg.width / 10, playerImg.height / 10);
+                break;
+            case 4:
+                ctx.drawImage(herdImg, playerX - playerRadius * 1.3, this.y - playerRadius * 1.4, playerImg.width / 8, playerImg.height / 8);
+                break;
+            default:
+                ctx.drawImage(playerImg, playerX - playerRadius * 2, this.y - playerRadius * 1.7, playerImg.width / 6, playerImg.height / 6);
+        }
     }
 
     this.move = function() {
@@ -156,7 +223,7 @@ function updateCanvas() {
     if (playerHit) {
         ctx.fillStyle = "orange";
         ctx.fillRect(restartButtonX, restartButtonY, buttonWidth, buttonHeight);
-        ctx.fillRect(470, 320, 140, 50);
+        ctx.fillRect(skinsButtonX, skinsButtonY, buttonWidth, buttonHeight);
 
         ctx.fillStyle = "white";
         ctx.font = "40px Arial";
@@ -197,6 +264,55 @@ function drawFloor() {
 
 }
 
+function drawSkinsPage() {
+    ctx = gameCanvas.context;
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillStyle = "black";
+    switch(skin) {
+        case 1: // nerd
+            ctx.fillRect(nerdSelection.x - 3, nerdSelection.y - 3, selectionWidth + 6, selectionHeight + 6);
+            break;
+        case 2: // third
+            ctx.fillRect(thirdSelection.x - 3, thirdSelection.y - 3, selectionWidth + 6, selectionHeight + 6);
+            break;
+        case 3: // turd
+        ctx.fillRect(turdSelection.x - 3, turdSelection.y - 3, selectionWidth + 6, selectionHeight + 6);
+            break;
+        case 4: // herd
+        ctx.fillRect(herdSelection.x - 3, herdSelection.y - 3, selectionWidth + 6, selectionHeight + 6);
+            break;
+        default: // bird
+            ctx.fillRect(birdSelection.x - 3, birdSelection.y - 3, selectionWidth + 6, selectionHeight + 6);
+    }
+    ctx.fillStyle = "white";
+    ctx.fillRect(selectionFirstColumn, selectionFirstRow, selectionWidth, selectionHeight);
+    ctx.fillRect(selectionSecondColumn, selectionFirstRow, selectionWidth, selectionHeight);
+    ctx.fillRect(selectionThirdColumn, selectionFirstRow, selectionWidth, selectionHeight);
+    ctx.fillRect(selectionFirstColumn, selectionSecondRow, selectionWidth, selectionHeight);
+    ctx.fillRect(selectionSecondColumn, selectionSecondRow, selectionWidth, selectionHeight);
+    ctx.fillStyle = "gray";
+    ctx.fillRect(selectionThirdColumn, selectionSecondRow, selectionWidth, selectionHeight);
+    ctx.drawImage(playerImg, 140, 90, playerImg.width / 6, playerImg.height / 6);
+    ctx.drawImage(nerdImg, 420, 100, playerImg.width / 9.4, playerImg.height / 9.4);
+    ctx.drawImage(thirdImg, 690, 100, playerImg.width / 9, playerImg.height / 9);
+    ctx.drawImage(turdImg, 150, 310, playerImg.width / 10, playerImg.height / 10);
+    ctx.drawImage(herdImg, 420, 310, playerImg.width / 8, playerImg.height / 8);
+    ctx.fillStyle = "white";
+    ctx.font = "30px Arial";
+    ctx.fillText("Flappy bird", 100, 230);
+    ctx.fillText("Flappy nerd", 370, 230);
+    ctx.fillText("Flappy third", 640, 230);
+    ctx.fillText("Flappy turd", 100, 440);
+    ctx.fillText("Flappy herd", 370, 440);
+    ctx.fillText("?", 710, 440);
+
+    ctx.fillStyle = "orange";
+    ctx.fillRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText("Play", playButtonX + 30, playButtonY + 37);
+}
+
 function drawScore() {
     ctx = gameCanvas.context;
     ctx.fillStyle = "white";
@@ -231,3 +347,52 @@ let restartButton = {
     width: buttonWidth,
     height: buttonHeight,
 };
+
+let skinsButton = {
+    x: skinsButtonX,
+    y: skinsButtonY,
+    width: buttonWidth,
+    height: buttonHeight,
+};
+
+let playButton = {
+    x: playButtonX,
+    y: playButtonY,
+    width: buttonWidth,
+    height: buttonHeight,
+}
+
+let birdSelection = {
+    x: selectionFirstColumn,
+    y: selectionFirstRow,
+    width: selectionWidth,
+    height: selectionHeight,
+}
+
+let nerdSelection = {
+    x: selectionSecondColumn,
+    y: selectionFirstRow,
+    width: selectionWidth,
+    height: selectionHeight,
+}
+
+let thirdSelection = {
+    x: selectionThirdColumn,
+    y: selectionFirstRow,
+    width: selectionWidth,
+    height: selectionHeight,
+}
+
+let turdSelection = {
+    x: selectionFirstColumn,
+    y: selectionSecondRow,
+    width: selectionWidth,
+    height: selectionHeight,
+}
+
+let herdSelection = {
+    x: selectionSecondColumn,
+    y: selectionSecondRow,
+    width: selectionWidth,
+    height: selectionHeight,
+}
