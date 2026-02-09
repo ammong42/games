@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Golden Button</title>
+
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: system-ui, Arial, sans-serif;
+    height: 100vh;
+    background: radial-gradient(circle at center, #0b0b0b 0%, #2a2a2a 45%, #6b6b6b 100%);
+    color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1 {
+    text-align: center;
+    margin: 12px 0 4px;
+    color: gold;
+  }
+
+  #helpIcon {
+    position: fixed;
+    top: 12px;
+    right: 14px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #444;
+    color: #fff;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  #helpOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+
+  #helpModal {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 20px 24px;
+    width: 90%;
+    max-width: 540px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  #helpModal h2 {
+    margin-top: 0;
+    color: gold;
+  }
+
+  #helpModal p {
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 8px 0;
+  }
+
+  #helpModal ul {
+    margin: 8px 0 12px 18px;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  #helpModal li {
+    margin: 6px 0;
+  }
+
+  #closeHelp {
+    margin-top: 14px;
+    padding: 8px 14px;
+    background: #444;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  #status {
+    text-align: center;
+    margin: 2px 0;
+    font-size: 18px;
+  }
+
+  #threshold {
+    text-align: center;
+    margin: 2px 0;
+    font-size: 18px;
+    color: #ffd966;
+  }
+
+  .threshold-number {
+    display: inline-block;
+    margin-left: 8px;
+    transition: color 0.3s ease, transform 0.3s ease;
+  }
+
+  .threshold-number.alert {
+    color: #ff4d4d;
+    transform: scale(1.9);
+  }
+
+  #game {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px;
+  }
+
+  .player {
+    width: 26%;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.35);
+    text-align: center;
+  }
+
+  .player.active {
+    outline: 2px solid gold;
+  }
+
+  .chips {
+    min-height: 56px;
+    margin: 4px 0 2px;
+  }
+
+  .chip {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #2b6cb0;
+    display: inline-block;
+    margin: 4px;
+  }
+
+  .stat {
+    font-size: 14px;
+    margin: 1px 0;
+    opacity: 0.9;
+  }
+
+  .side {
+    min-height: 210px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    margin-top: 10px;
+  }
+
+  .promptRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    opacity: 0.9;
+  }
+
+  .actionRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .cost {
+    font-size: 12px;
+    opacity: 0.75;
+  }
+
+  button {
+    padding: 9px 14px;
+    font-size: 15px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: #444;
+    color: #fff;
+  }
+
+  button:disabled {
+    background: #222;
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .warning {
+    font-size: 12px;
+    color: #ff8080;
+    margin-top: 4px;
+    text-align: center;
+  }
+
+  #center {
+    width: 40%;
+    text-align: center;
+  }
+
+  #goldenButton {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: radial-gradient(circle, #fff2a8, #d4af37);
+    box-shadow: 0 0 30px gold, 0 0 70px rgba(255,215,0,0.9);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 25px gold; }
+    50% { box-shadow: 0 0 90px gold; }
+    100% { box-shadow: 0 0 25px gold; }
+  }
+
+  #roll {
+    margin-top: 10px;
+    font-size: 28px;
+    letter-spacing: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #playAgain {
+    margin: 10px auto 18px;
+    padding: 12px 22px;
+    font-size: 18px;
+    display: none;
+    background: gold;
+    color: #000;
+  }
+</style>
+</head>
+<body>
+
+<div id="helpIcon">?</div>
+
+<div id="helpOverlay">
+  <div id="helpModal">
+    <h2>How to Play</h2>
+
+    <p>
+      At the start of your turn, you automatically gain chips equal to your Draw Count.
+      You may spend chips to do the following actions any number of times, and you cannot
+      end your turn while holding more chips than your Hand Limit.
+    </p>
+
+    <ul>
+      <li>Spend 1 chip to press the Golden Button and roll for an instant win.</li>
+      <li>Spend 2 chips to permanently increase your Hand Limit by 1.</li>
+      <li>Spend 3 chips to permanently increase your Draw Count by 1.</li>
+    </ul>
+
+    <p>
+      When a player pushes the button, a two-digit number (00–99) is randomly generated.
+      If the roll is greater than or equal to the minimum, that player wins instantly.
+      Otherwise, the minimum required to win decreases by 1.
+    </p>
+
+    <button id="closeHelp">Close</button>
+  </div>
+</div>
+
+<h1>🟡 The Golden Button</h1>
+<div id="status"></div>
+<div id="threshold">
+  Minimum number required to win:
+  <span id="thresholdNumber" class="threshold-number">99</span>
+</div>
+
+<div id="game">
+  <div class="player" id="p1">
+    <strong>Player 1</strong>
+    <div class="chips"></div>
+    <div class="stat hand"></div>
+    <div class="stat draw"></div>
+    <div class="side" id="sideP1"></div>
+  </div>
+
+  <div id="center">
+    <button id="goldenButton"></button>
+    <div id="roll">--</div>
+  </div>
+
+  <div class="player" id="p2">
+    <strong>Player 2</strong>
+    <div class="chips"></div>
+    <div class="stat hand"></div>
+    <div class="stat draw"></div>
+    <div class="side" id="sideP2"></div>
+  </div>
+</div>
+
+<button id="playAgain">Play Again</button>
+
+<script>
+let players, currentPlayer, threshold, winner;
+let rolling = false;
+
+const helpIcon = document.getElementById("helpIcon");
+const helpOverlay = document.getElementById("helpOverlay");
+const closeHelp = document.getElementById("closeHelp");
+
+helpIcon.onclick = () => helpOverlay.style.display = "flex";
+closeHelp.onclick = () => helpOverlay.style.display = "none";
+helpOverlay.onclick = e => {
+  if (e.target === helpOverlay) helpOverlay.style.display = "none";
+};
+
+function resetGame() {
+  players = [
+    { chips: 1, draw: 1, hand: 5 },
+    { chips: 1, draw: 1, hand: 5 }
+  ];
+  currentPlayer = 0;
+  threshold = 99;
+  winner = null;
+  rolling = false;
+  document.getElementById("playAgain").style.display = "none";
+  document.getElementById("roll").textContent = "--";
+  updateThreshold();
+  startTurn();
+}
+
+function startTurn() {
+  players[currentPlayer].chips += players[currentPlayer].draw;
+  render();
+}
+
+function render() {
+  ["p1", "p2"].forEach((id, i) => {
+    const p = players[i];
+    const div = document.getElementById(id);
+    div.classList.toggle("active", i === currentPlayer && !winner);
+
+    const chipsDiv = div.querySelector(".chips");
+    chipsDiv.innerHTML = "";
+    for (let c = 0; c < p.chips; c++) {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chipsDiv.appendChild(chip);
+    }
+
+    div.querySelector(".hand").textContent = `Hand Limit: ${p.hand}`;
+    div.querySelector(".draw").textContent = `Draw Count: ${p.draw}`;
+  });
+
+  document.getElementById("status").textContent =
+    winner ? `🎉 Player ${winner + 1} WINS! 🎉`
+           : `Player ${currentPlayer + 1}'s turn`;
+
+  renderSideButtons();
+}
+
+function updateThreshold(flash = false) {
+  const numEl = document.getElementById("thresholdNumber");
+  numEl.textContent = threshold;
+  if (flash) {
+    numEl.classList.add("alert");
+    setTimeout(() => numEl.classList.remove("alert"), 1000);
+  }
+}
+
+function renderSideButtons() {
+  ["sideP1", "sideP2"].forEach((id, i) => {
+    const side = document.getElementById(id);
+    side.innerHTML = "";
+    if (i !== currentPlayer || winner) return;
+
+    const p = players[i];
+
+    const prompt = document.createElement("div");
+    prompt.className = "promptRow";
+    prompt.innerHTML =
+      `<span>Push the button for a chance to win!</span><span class="cost">Cost: 1</span>`;
+    side.appendChild(prompt);
+
+    side.append(
+      actionRow("+1 Hand Limit", 2, () => {
+        if (p.chips < 2) return;
+        p.chips -= 2;
+        p.hand++;
+        render();
+      }),
+      actionRow("+1 Draw Count", 3, () => {
+        if (p.chips < 3) return;
+        p.chips -= 3;
+        p.draw++;
+        render();
+      })
+    );
+
+    const endBtn = document.createElement("button");
+    endBtn.textContent = "End Turn";
+    endBtn.onclick = endTurn;
+    side.appendChild(endBtn);
+
+    if (p.chips > p.hand) {
+      endBtn.disabled = true;
+      const warning = document.createElement("div");
+      warning.className = "warning";
+      warning.textContent =
+        "You can't end your turn with a chip count above your hand limit";
+      side.appendChild(warning);
+    }
+  });
+}
+
+function actionRow(label, cost, fn) {
+  const row = document.createElement("div");
+  row.className = "actionRow";
+  const btn = document.createElement("button");
+  btn.textContent = label;
+  btn.onclick = fn;
+  const costEl = document.createElement("span");
+  costEl.className = "cost";
+  costEl.textContent = `Cost: ${cost}`;
+  row.append(btn, costEl);
+  return row;
+}
+
+function endTurn() {
+  currentPlayer = currentPlayer === 0 ? 1 : 0;
+  startTurn();
+}
+
+document.getElementById("goldenButton").onclick = async () => {
+  if (winner || rolling) return;
+  const p = players[currentPlayer];
+  if (p.chips < 1) return;
+
+  p.chips--;
+  rolling = true;
+
+  const rollEl = document.getElementById("roll");
+
+  let interval = setInterval(() => {
+    rollEl.textContent =
+      Math.floor(Math.random() * 100).toString().padStart(2, "0");
+  }, 40);
+
+  await sleep(800);
+
+  const finalRoll = Math.floor(Math.random() * 100);
+  const digits = finalRoll.toString().padStart(2, "0").split("");
+
+  clearInterval(interval);
+  rollEl.textContent = digits[0] + Math.floor(Math.random() * 10);
+
+  const secondInterval = setInterval(() => {
+    rollEl.textContent = digits[0] + Math.floor(Math.random() * 10);
+  }, 40);
+
+  await sleep(500);
+  clearInterval(secondInterval);
+  rollEl.textContent = digits.join("");
+
+  if (finalRoll >= threshold) {
+    winner = currentPlayer;
+    document.getElementById("playAgain").style.display = "block";
+    render();
+    return;
+  }
+
+  threshold--;
+  updateThreshold(true);
+  rolling = false;
+  render();
+};
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+document.getElementById("playAgain").onclick = resetGame;
+
+resetGame();
+</script>
+
+</body>
+</html>
