@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Wally World Last Stand",
+  "schemaVersion": 1,
+  "description": "Wally World Last Stand – a turn-based alien defense game set in a grocery store. 3×6 grid, 3 actions per turn, throw items at aliens to defeat them before they breach the checkout line.",
+  "mcpTools": [],
+  "mcpServerNames": []
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wally World Last Stand</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #f2ede4;
+  color: #1a1820;
+  font-family: 'Courier New', Courier, monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  gap: 12px;
+}
+
+/* ===== HEADER ===== */
+.header-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 620px;
+  gap: 8px;
+}
+.header-center { flex: 1; text-align: center; min-width: 0; }
+.game-title    { font-size: 1.45rem; font-weight: bold; color: #1a6a2a; letter-spacing: 2px; }
+.game-subtitle { font-size: 0.65rem; color: #999; letter-spacing: 1px; text-transform: uppercase; }
+
+.header-icons { display: flex; gap: 5px; flex-shrink: 0; }
+.icon-btn {
+  background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  padding: 4px 7px; font-size: 1rem; cursor: pointer; line-height: 1;
+  transition: all 0.13s; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.icon-btn:hover { background: #f0eee8; border-color: #aaa; }
+
+/* ===== SCORE BAR ===== */
+.score-bar {
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+  font-size: 0.75rem; color: #888;
+  background: #fff; border: 1px solid #ddd; border-radius: 8px;
+  padding: 6px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.score-bar strong { color: #c44; }
+.credit-val { color: #a67c00 !important; }
+
+/* ===== MAIN LAYOUT ===== */
+.game-layout { display: flex; gap: 16px; align-items: flex-start; width: 100%; max-width: 620px; }
+
+/* ===== LEFT PANEL ===== */
+.left-panel { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.phase-badge {
+  font-size: 0.63rem; text-transform: uppercase; letter-spacing: 2px; color: #555;
+  background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 3px 10px;
+}
+
+/* ===== GRID ===== */
+.grid-shell { background: #e8e2d8; border: 2px solid #c8b89a; border-radius: 10px; padding: 7px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.grid { display: grid; grid-template-columns: repeat(3, 88px); gap: 5px; }
+.cell {
+  width: 88px; height: 74px; background: #faf7f2; border: 1px solid #d8c9b0; border-radius: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; font-size: 1.65rem; position: relative;
+  transition: background 0.12s, border-color 0.12s; user-select: none;
+}
+.cell.alien-basic    { background: #ecfaec; border-color: #5a9a5a; }
+.cell.alien-teleport { background: #e8eeff; border-color: #5566bb; }
+.cell.alien-fast     { background: #fff5e0; border-color: #cc8800; }
+.cell.alien-horde    { background: #f5ffe5; border-color: #779933; }
+.cell.alien-boss     { background: #fff0f0; border-color: #cc3333; box-shadow: 0 0 8px rgba(204,51,51,0.25); }
+.cell.alien-hurt     { filter: brightness(0.93) saturate(1.3); }
+.cell.targetable { cursor: pointer; border-color: #dd2222 !important; background: #fff0f0 !important; animation: tgtPulse 0.85s ease-in-out infinite; }
+.cell.targetable:hover { background: #ffd8d8 !important; transform: scale(1.04); z-index: 2; }
+@keyframes tgtPulse { 0%,100%{box-shadow:0 0 4px rgba(221,34,34,0.2);} 50%{box-shadow:0 0 12px rgba(221,34,34,0.55);} }
+.alien-icon { line-height: 1; }
+.hp-hearts { display: flex; gap: 2px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: 80px; }
+.heart { font-size: 0.65rem; font-family: serif; line-height: 1; }
+.heart.full  { color: #e02020; }
+.heart.empty { color: #ccc; }
+.hp-count { font-size: 0.58rem; color: #888; margin-left: 2px; }
+@keyframes flashHit  { 0%{background:#faa;}100%{} }
+@keyframes flashMiss { 0%,100%{opacity:1;} 45%{opacity:0.2;} }
+.flash-hit  { animation: flashHit  0.35s ease; }
+.flash-miss { animation: flashMiss 0.45s ease; }
+
+/* ===== PLAYER ===== */
+.player-track { display: flex; gap: 5px; }
+.player-slot  { width: 88px; height: 52px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.65rem; }
+.player-slot.active { background: #e8f0ff; border: 2px solid #4477cc; box-shadow: 0 2px 8px rgba(68,119,204,0.2); }
+.player-slot.empty  { background: rgba(0,0,0,0.03); border: 1px solid #ddd; }
+.aisle-row   { display: flex; gap: 5px; }
+.aisle-label { width: 88px; text-align: center; font-size: 0.57rem; color: #bbb; letter-spacing: 1px; text-transform: uppercase; }
+
+/* ===== RIGHT PANEL ===== */
+.right-panel  { width: 188px; display: flex; flex-direction: column; gap: 11px; padding-top: 30px; }
+.section-head { font-size: 0.57rem; text-transform: uppercase; letter-spacing: 2px; color: #aaa; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; margin-bottom: 1px; }
+
+.pips-row { display: flex; align-items: center; gap: 6px; }
+.pip      { width: 13px; height: 13px; border-radius: 50%; transition: all 0.2s; }
+.pip.on   { background: #e8a020; box-shadow: 0 0 5px rgba(232,160,32,0.5); }
+.pip.off  { background: #ddd; border: 1px solid #ccc; }
+.pip-label { font-size: 0.68rem; color: #aaa; margin-left: 2px; }
+
+.action-btn {
+  width: 100%; padding: 8px 11px;
+  background: #fff; border: 1.5px solid #4477cc; border-radius: 7px;
+  color: #2255aa; font-family: 'Courier New', Courier, monospace; font-size: 0.78rem;
+  text-align: left; cursor: pointer; transition: all 0.13s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06); line-height: 1.3;
+}
+.action-btn:hover:not(:disabled) { background: #eef3ff; border-color: #2255aa; box-shadow: 0 2px 7px rgba(68,119,204,0.18); transform: translateY(-1px); }
+.action-btn:disabled { background: #f5f5f5; border-color: #e0e0e0; color: #bbb; cursor: not-allowed; box-shadow: none; transform: none; }
+.action-btn.used-up  { background: #f9f9f9; border-color: #ccc; color: #aaa; opacity: 0.7; }
+.btn-sub { font-size: 0.64rem; color: #88a; margin-top: 1px; }
+.action-btn:disabled .btn-sub, .action-btn.used-up .btn-sub { color: #ccc; }
+
+.passive-badge { width: 100%; padding: 6px 11px; background: #f0fff0; border: 1px solid #99cc99; border-radius: 7px; color: #336633; font-family: 'Courier New', Courier, monospace; font-size: 0.75rem; text-align: left; line-height: 1.3; }
+.passive-badge .btn-sub { color: #669966; }
+
+.end-turn-btn { width: 100%; padding: 6px 11px; background: #f8f8f8; border: 1px solid #ccc; border-radius: 6px; color: #888; font-family: 'Courier New', Courier, monospace; font-size: 0.7rem; cursor: pointer; transition: all 0.13s; text-align: left; }
+.end-turn-btn:hover:not(:disabled) { background: #fff; border-color: #999; color: #444; }
+.end-turn-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.targeting-ui      { display: none; flex-direction: column; gap: 5px; }
+.targeting-ui.show { display: flex; }
+.targeting-msg { font-size: 0.72rem; color: #cc3333; animation: blink 0.8s infinite alternate; }
+@keyframes blink { from{opacity:1;} to{opacity:0.3;} }
+.cancel-small { background: none; border: 1px solid #ddd; color: #999; padding: 4px 9px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; font-size: 0.68rem; cursor: pointer; transition: all 0.13s; align-self: flex-start; }
+.cancel-small:hover { border-color: #999; color: #444; }
+
+.die-box { background: #fff; border: 1px solid #e8e8e8; border-radius: 7px; padding: 8px; min-height: 66px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.no-throw    { font-size: 0.68rem; color: #ccc; }
+.die-face    { font-size: 2.2rem; line-height: 1; animation: diePop 0.22s ease; }
+@keyframes diePop { from{transform:scale(0.3) rotate(-25deg);opacity:0;} to{transform:scale(1) rotate(0);opacity:1;} }
+.die-info    { font-size: 0.66rem; text-align: center; color: #888; line-height: 1.5; }
+.result-hit  { color: #1a8a1a; font-weight: bold; }
+.result-miss { color: #cc3333; font-weight: bold; }
+
+.log-box { background: #fff; border: 1px solid #e8e8e8; border-radius: 6px; padding: 6px; height: 118px; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.03); }
+.log-box::-webkit-scrollbar { width: 4px; }
+.log-box::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 2px; }
+.log-line { font-size: 0.63rem; line-height: 1.45; padding-bottom: 2px; border-bottom: 1px solid #f5f5f5; }
+.log-line.hit-log   { color: #1a7a1a; }
+.log-line.miss-log  { color: #cc4433; }
+.log-line.alien-log { color: #a06010; }
+.log-line.boss-log  { color: #aa1111; font-weight: bold; }
+.log-line.shop-log  { color: #a67c00; }
+.log-line.sys-log   { color: #4477cc; }
+.log-line.turn-log  { color: #ccc; font-style: italic; }
+
+/* ===== SHOP OVERLAY ===== */
+.shop-overlay { display: none; position: fixed; inset: 0; background: rgba(242,237,228,0.95); z-index: 150; align-items: center; justify-content: center; padding: 20px; }
+.shop-overlay.show { display: flex; }
+.shop-panel { background: #fff; border: 2px solid #c8a840; border-radius: 14px; padding: 20px; max-width: 480px; width: 100%; box-shadow: 0 8px 30px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 14px; max-height: 90vh; overflow-y: auto; }
+.shop-header { text-align: center; }
+.shop-title  { font-size: 1.2rem; font-weight: bold; color: #a67c00; letter-spacing: 2px; }
+.shop-wave   { font-size: 0.72rem; color: #888; margin-top: 2px; }
+.shop-credits-bar { text-align: center; font-size: 0.9rem; color: #555; }
+.shop-credits-bar strong { color: #a67c00; font-size: 1.05rem; }
+.shop-items { display: flex; flex-direction: column; gap: 8px; }
+.shop-item { background: #faf8f0; border: 1.5px solid #e0d0a0; border-radius: 9px; padding: 10px 13px; display: flex; align-items: center; gap: 12px; }
+.shop-item.owned   { opacity: 0.55; border-color: #ddd; }
+.shop-item.no-cash { opacity: 0.65; }
+.shop-item-icon { font-size: 1.6rem; flex-shrink: 0; }
+.shop-item-body { flex: 1; }
+.shop-item-name { font-size: 0.82rem; font-weight: bold; color: #333; }
+.shop-item-desc { font-size: 0.68rem; color: #888; margin-top: 2px; line-height: 1.4; }
+.buy-btn { flex-shrink: 0; padding: 6px 11px; background: #a67c00; border: none; border-radius: 6px; color: #fff; font-family: 'Courier New', Courier, monospace; font-size: 0.72rem; cursor: pointer; white-space: nowrap; transition: all 0.13s; }
+.buy-btn:hover:not(:disabled) { background: #c49a00; transform: scale(1.04); }
+.buy-btn:disabled { background: #ccc; cursor: not-allowed; }
+.owned-badge { font-size: 0.7rem; color: #5a9a5a; font-weight: bold; white-space: nowrap; }
+.shop-close-btn { padding: 11px; width: 100%; background: #1a6a2a; border: none; border-radius: 8px; color: #fff; font-family: 'Courier New', Courier, monospace; font-size: 0.88rem; cursor: pointer; letter-spacing: 1px; transition: all 0.13s; }
+.shop-close-btn:hover { background: #1f8a35; }
+
+/* ===== SHARED MODAL ===== */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(242,237,228,0.92); z-index: 400; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.show { display: flex; }
+.modal-panel { background: #fff; border: 2px solid #c8b89a; border-radius: 14px; padding: 22px; max-width: 440px; width: 100%; box-shadow: 0 8px 30px rgba(0,0,0,0.15); max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; }
+.modal-title  { font-size: 1.05rem; font-weight: bold; color: #1a6a2a; letter-spacing: 1px; }
+.modal-close  { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 3px 8px; font-size: 0.9rem; cursor: pointer; color: #888; transition: all 0.13s; }
+.modal-close:hover { border-color: #999; color: #333; }
+
+/* How to Play */
+.help-section { margin-bottom: 2px; }
+.help-section h3 { font-size: 0.78rem; color: #a67c00; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; border-bottom: 1px solid #f0e8d0; padding-bottom: 3px; }
+.help-section p, .help-section li { font-size: 0.75rem; color: #444; line-height: 1.6; }
+.help-section ul { padding-left: 14px; }
+.help-section li { margin-bottom: 3px; }
+
+/* Settings toggles */
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 0.85rem; color: #333; }
+.setting-desc  { font-size: 0.68rem; color: #999; margin-top: 2px; }
+
+.toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 24px; transition: 0.25s; }
+.toggle-slider:before { position: absolute; content: ''; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.25s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+input:checked + .toggle-slider { background: #1a6a2a; }
+input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+/* ===== GAME OVER ===== */
+.go-overlay { display: none; position: fixed; inset: 0; background: rgba(242,237,228,0.93); z-index: 200; flex-direction: column; align-items: center; justify-content: flex-start; gap: 14px; text-align: center; padding: 30px 20px; overflow-y: auto; }
+.go-overlay.show { display: flex; }
+.go-alien { font-size: 3.5rem; animation: float 1.2s ease-in-out infinite alternate; }
+@keyframes float { from{transform:translateY(0);} to{transform:translateY(-12px);} }
+.go-title { font-size: 1.9rem; font-weight: bold; color: #cc2222; letter-spacing: 2px; }
+.go-body  { font-size: 0.83rem; color: #777; line-height: 1.7; }
+.go-stats { font-size: 0.9rem; color: #555; }
+.go-stats strong { color: #c44; }
+.play-again-btn { padding: 11px 30px; background: #fff; border: 2px solid #4477cc; border-radius: 9px; color: #2255aa; font-family: 'Courier New', Courier, monospace; font-size: 0.88rem; cursor: pointer; transition: all 0.14s; letter-spacing: 1px; }
+.play-again-btn:hover { background: #eef3ff; box-shadow: 0 3px 12px rgba(68,119,204,0.22); transform: scale(1.04); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header-wrap">
+  <div style="width:66px;flex-shrink:0"></div><!-- spacer to balance the icons -->
+  <div class="header-center">
+    <div class="game-title">🛒 WALLY WORLD LAST STAND 👽</div>
+    <div class="game-subtitle">Defend the store · Don't let them past the checkout</div>
+  </div>
+  <div class="header-icons">
+    <button class="icon-btn" onclick="openHelp()" title="How to Play">❓</button>
+    <button class="icon-btn" onclick="openSettings()" title="Settings">⚙️</button>
+  </div>
+</div>
+
+<!-- SCORE BAR -->
+<div class="score-bar">
+  <span>Turn <strong id="turnNum">1</strong></span>
+  <span>Wave <strong id="waveNum">1</strong></span>
+  <span>Defeated <strong id="scoreNum">0</strong></span>
+  <span>Credits <strong class="credit-val" id="creditsNum">0</strong></span>
+</div>
+
+<!-- MAIN GAME -->
+<div class="game-layout">
+  <div class="left-panel">
+    <div class="phase-badge" id="phaseBadge">Your Turn</div>
+    <div class="grid-shell"><div class="grid" id="gridEl"></div></div>
+    <div class="player-track" id="playerTrack"></div>
+    <div class="aisle-row">
+      <div class="aisle-label">Aisle 1</div>
+      <div class="aisle-label">Aisle 2</div>
+      <div class="aisle-label">Aisle 3</div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div>
+      <div class="section-head">Actions Remaining</div>
+      <div class="pips-row" id="pipsEl"></div>
+    </div>
+    <div>
+      <div class="section-head">Available Actions</div>
+      <button class="action-btn" id="throwBtn" onclick="ui_startAction('throw')">
+        🥫 Throw Item<div class="btn-sub" id="throwSub"></div>
+      </button>
+      <button class="action-btn" id="heavyBtn" style="display:none;margin-top:5px" onclick="ui_startAction('heavy')">
+        🧱 Throw Heavy Item<div class="btn-sub" id="heavySub"></div>
+      </button>
+      <button class="action-btn" id="streamlinedBtn" style="display:none;margin-top:5px" onclick="ui_startAction('streamlined')">
+        🎯 Throw Streamlined Item<div class="btn-sub" id="streamlinedSub"></div>
+      </button>
+      <button class="action-btn" id="splashBtn" style="display:none;margin-top:5px" onclick="ui_startAction('splash')">
+        💦 Throw Splashable Item<div class="btn-sub" id="splashSub"></div>
+      </button>
+      <div class="passive-badge" id="rollFirstBadge" style="display:none;margin-top:5px">
+        🎲 Roll Before Targeting
+        <div class="btn-sub">Active — die rolls before target select</div>
+      </div>
+    </div>
+
+    <div class="targeting-ui" id="targetingUi">
+      <div class="targeting-msg">🎯 Select an alien to target</div>
+      <button class="cancel-small" onclick="ui_cancelAction()">✕ Cancel</button>
+    </div>
+
+    <div class="die-box" id="dieBox"><div class="no-throw">— no throw yet —</div></div>
+
+    <button class="end-turn-btn" id="endTurnBtn" onclick="ui_endTurnEarly()">⏭ End Turn Early</button>
+
+    <div>
+      <div class="section-head">Combat Log</div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP -->
+<div class="shop-overlay" id="shopOverlay"></div>
+
+<!-- HOW TO PLAY MODAL -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <div class="modal-title">❓ HOW TO PLAY</div>
+      <button class="modal-close" onclick="closeHelp()">✕ Close</button>
+    </div>
+
+    <div class="help-section">
+      <h3>Goal</h3>
+      <p>Defend Wally World by defeating aliens before they reach the checkout line at the bottom. If any alien passes below the grid, the game is over. How many waves can you hold them off?</p>
+    </div>
+
+    <div class="help-section">
+      <h3>Turn Order</h3>
+      <ul>
+        <li>Each turn, all aliens <strong>move one tile down</strong> and a new alien spawns in the top row.</li>
+        <li>Then it's your turn — you have <strong>3 actions</strong> to spend.</li>
+        <li>When you run out of actions (or click End Turn Early), the next turn begins.</li>
+        <li>If the grid is cleared of aliens, your turn ends automatically.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>Throwing Items</h3>
+      <ul>
+        <li>Click <strong>Throw Item</strong>, then click an alien to target it.</li>
+        <li>A die (1–6) is rolled. You <strong>hit if the roll ≥ the distance</strong> to the target (bottom row = distance 1, top row = distance 6).</li>
+        <li>Purchased actions (Heavy, Streamlined, Splash) can each be used <strong>once per turn</strong>.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>Alien Types</h3>
+      <ul>
+        <li>👽 <strong>Basic</strong> — Standard HP, no special traits.</li>
+        <li>🤖 <strong>Teleporter</strong> — Spawns in row 2, slightly lower HP.</li>
+        <li>🏃 <strong>Fast</strong> — Lower HP, but −1 to your accuracy roll when targeted.</li>
+        <li>🐛 <strong>Horde</strong> — Fills all open lanes with weak bug aliens.</li>
+        <li>👾 <strong>Boss</strong> — Every 10th alien. Double HP. Defeating it opens the shop and increases base alien HP for future waves.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>Shop & Credits</h3>
+      <p>Defeat a boss to open the upgrade shop. Credits earned = <strong>10 × bosses defeated</strong>. Spend them on new actions or stat upgrades that persist for the rest of the run.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ SETTINGS</div>
+      <button class="modal-close" onclick="closeSettings()">✕ Close</button>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">🎵 Music</div>
+        <div class="setting-desc">Background arcade music</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="musicToggle" checked onchange="setMusic(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">🔊 Sound Effects</div>
+        <div class="setting-desc">Hit, miss, and throw sounds</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="sfxToggle" checked onchange="setSfx(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div class="go-overlay" id="goOverlay">
+  <div class="go-alien">👽</div>
+  <div class="go-title">THEY GOT THROUGH!</div>
+  <div class="go-body">The aliens breached the checkout line.<br>Wally World has fallen.</div>
+  <div class="go-stats">Turn <strong id="finalTurn">1</strong> · Wave <strong id="finalWave">1</strong> · Aliens defeated <strong id="finalScore">0</strong></div>
+  <div id="hsSection"></div>
+  <button class="play-again-btn" onclick="initGame()">🔄 Try Again</button>
+</div>
+
+<script>
+// ================================================================
+// CONSTANTS
+// ================================================================
+const ROWS = 6, COLS = 3, ACTIONS_PER_TURN = 3;
+const DIE_FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+const NORMAL_TYPES = ['basic','teleport','fast','horde'];
+
+const THROW_ITEMS = {
+  throw:       ['chips','marker','chicken leg','candy bar','doll'],
+  heavy:       ['pineapple','frozen pizza','basketball','monitor','hammer'],
+  splash:      ['water balloon','eggs','juice box','flour','hand sanitizer'],
+  streamlined: ['orange','frisbee','tennis ball','mouse','peach'],
+};
+function pickItem(t) {
+  const arr = THROW_ITEMS[t] || THROW_ITEMS.throw;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// ================================================================
+// STATE
+// ================================================================
+let grid, actionsLeft, turn, wave, score;
+let baseHP, baseDamage, baseAccuracy;
+let credits, bossesDefeated, spawnCount;
+let isOver, shopOpen, pendingShop, selectingAction;
+let hasHeavy, hasStreamlined, hasSplash, hasRollFirst, hasFourthAction;
+let pendingRoll;
+let abilityUsed;
+let advanceLock = 0;
+let hsSubmitted = false;
+
+// ================================================================
+// INIT
+// ================================================================
+function initGame() {
+  grid        = Array.from({length:ROWS}, () => Array(COLS).fill(null));
+  actionsLeft = ACTIONS_PER_TURN;
+  turn = 1; wave = 1; score = 0;
+  baseHP = 2; baseDamage = 1; baseAccuracy = 0;
+  credits = 0; bossesDefeated = 0; spawnCount = 0;
+  isOver = false; shopOpen = false; pendingShop = false; selectingAction = null;
+  hasHeavy = false; hasStreamlined = false; hasSplash = false; hasRollFirst = false; hasFourthAction = false;
+  pendingRoll = null;
+  abilityUsed = {heavy:false, streamlined:false, splash:false};
+  advanceLock = 0;
+  hsSubmitted = false;
+
+  document.getElementById('goOverlay').classList.remove('show');
+  document.getElementById('shopOverlay').classList.remove('show');
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('dieBox').innerHTML = '<div class="no-throw">— no throw yet —</div>';
+  document.getElementById('targetingUi').classList.remove('show');
+
+  addLog('🛒 Store open. Alien threat detected!','sys-log');
+  addLog('Closer aliens are easier to hit.','sys-log');
+
+  doAlienPhase(true);
+  render();
+  startMusic();
+}
+
+// ================================================================
+// ALIEN SPAWNING
+// ================================================================
+function pickSpawnType() {
+  spawnCount++;
+  if (spawnCount % 10 === 0) return 'boss';
+  // Never let the very first alien be fast (it's unfair before the player understands the penalty)
+  const pool = (spawnCount === 1)
+    ? NORMAL_TYPES.filter(t => t !== 'fast')
+    : NORMAL_TYPES;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function freeCols(row) {
+  const f = [];
+  for (let c=0;c<COLS;c++) if (!grid[row][c]) f.push(c);
+  return f;
+}
+
+function randomFrom(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+
+function spawnAlienWave() { spawnAlienOfType(pickSpawnType()); }
+
+function spawnAlienOfType(type) {
+  if (type === 'boss') {
+    const free = freeCols(0);
+    if (!free.length) { addLog('⚠️ Boss blocked — no room!','boss-log'); wave++; baseHP++; return; }
+    const hp = baseHP * 2;
+    grid[0][randomFrom(free)] = {hp, maxHp:hp, type:'boss'};
+    wave++; baseHP++;
+    addLog(`⚠️ BOSS descends! Wave ${wave} begins. Alien HP ↑ (now ${baseHP})`, 'boss-log');
+
+  } else if (type === 'horde') {
+    const hp = Math.max(1, Math.round(baseHP/3));
+    let n=0;
+    for (let c=0;c<COLS;c++) if (!grid[0][c]) { grid[0][c]={hp,maxHp:hp,type:'horde'}; n++; }
+    if (n) addLog(`🐛 Bug swarm! ${n} horde aliens descend.`, 'alien-log');
+
+  } else if (type === 'teleport') {
+    const free = freeCols(1);
+    if (!free.length) {
+      // Row 2 full — spawn a different type instead
+      spawnAlienOfType(randomFrom(NORMAL_TYPES.filter(t => t !== 'teleport')));
+      return;
+    }
+    const hp = Math.max(1, baseHP-1);
+    const c = randomFrom(free);
+    grid[1][c] = {hp, maxHp:hp, type:'teleport'};
+    addLog(`🤖 Teleporter materializes — row 2, aisle ${c+1}!`, 'alien-log');
+
+  } else if (type === 'fast') {
+    const free = freeCols(0);
+    if (!free.length) return;
+    const hp = Math.max(1, baseHP-1);
+    const c = randomFrom(free);
+    grid[0][c] = {hp, maxHp:hp, type:'fast'};
+    addLog(`🏃 Fast alien darts in! Aisle ${c+1}. (−1 to your roll)`, 'alien-log');
+
+  } else {
+    const free = freeCols(0);
+    if (!free.length) return;
+    grid[0][randomFrom(free)] = {hp:baseHP, maxHp:baseHP, type:'basic'};
+  }
+}
+
+// ================================================================
+// ALIEN PHASE
+// ================================================================
+function doAlienPhase(firstTurn) {
+  let breached = false;
+  for (let r=ROWS-1;r>=0;r--) for (let c=0;c<COLS;c++) {
+    if (grid[r][c]) {
+      if (r===ROWS-1) breached=true;
+      else { grid[r+1][c]=grid[r][c]; grid[r][c]=null; }
+    }
+  }
+  if (breached) { triggerGameOver(); return; }
+  spawnAlienWave();
+  actionsLeft = ACTIONS_PER_TURN + (hasFourthAction ? 1 : 0);
+  abilityUsed = {heavy:false, streamlined:false, splash:false};
+}
+
+// ================================================================
+// DAMAGE
+// ================================================================
+function applyDamage(r, c, dmg) {
+  if (!grid[r][c]) return;
+  grid[r][c].hp -= dmg;
+  if (grid[r][c].hp <= 0) {
+    const wasBoss = grid[r][c].type === 'boss';
+    grid[r][c] = null;
+    score++;
+    if (wasBoss) {
+      bossesDefeated++;
+      const earned = 10 * bossesDefeated;
+      credits += earned;
+      addLog(`💀 BOSS DEFEATED! +${earned} credits!`, 'boss-log');
+      pendingShop = true;
+      setTimeout(() => { pendingShop=false; shopOpen=true; render(); }, 450);
+    }
+  }
+}
+
+// ================================================================
+// PLAYER ACTIONS
+// ================================================================
+function canUse(type) {
+  if (isOver||shopOpen||pendingShop||actionsLeft<=0||selectingAction) return false;
+  if (type==='throw')       return true;
+  if (type==='heavy')       return hasHeavy && !abilityUsed.heavy;
+  if (type==='streamlined') return hasStreamlined && !abilityUsed.streamlined;
+  if (type==='splash')      return hasSplash && !abilityUsed.splash;
+  return false;
+}
+
+function ui_startAction(type) {
+  if (!canUse(type)) return;
+  const hasAlien = grid.some(row => row.some(c=>c));
+  if (!hasAlien) { document.getElementById('dieBox').innerHTML='<div class="no-throw">No aliens to target!</div>'; return; }
+  selectingAction = type;
+  if (hasRollFirst) {
+    pendingRoll = Math.floor(Math.random()*6)+1;
+    document.getElementById('dieBox').innerHTML=`
+      <div class="die-face">${DIE_FACES[pendingRoll-1]}</div>
+      <div class="die-info">Rolled <strong>${pendingRoll}</strong>${baseAccuracy?` +${baseAccuracy} acc`:''}<br>
+      <span style="color:#888;font-style:italic">Now pick your target!</span></div>`;
+  } else { pendingRoll=null; }
+  document.getElementById('targetingUi').classList.add('show');
+  render();
+}
+
+function ui_cancelAction() {
+  selectingAction=null; pendingRoll=null;
+  document.getElementById('targetingUi').classList.remove('show');
+  render();
+}
+
+function ui_endTurnEarly() {
+  if (isOver||shopOpen||pendingShop||actionsLeft<=0) return;
+  scheduleAdvance(0);
+}
+
+function executeAction(r, c) {
+  if (!selectingAction||!grid[r][c]||isOver) return;
+  const actionType=selectingAction;
+  selectingAction=null;
+  document.getElementById('targetingUi').classList.remove('show');
+
+  const alien=grid[r][c];
+  const alienPenalty = (alien.type==='fast')?1:0;
+  const actionBonus  = (actionType==='streamlined')?2:0;
+  const dist    = ROWS-r;
+  const rawRoll = (pendingRoll!==null)?pendingRoll:Math.floor(Math.random()*6)+1;
+  pendingRoll   = null;
+  const effRoll = rawRoll+baseAccuracy+actionBonus-alienPenalty;
+  const hit     = effRoll>=dist;
+
+  let dmg=baseDamage;
+  if (actionType==='heavy') dmg=baseDamage+1;
+
+  actionsLeft--;
+  if (actionType!=='throw') abilityUsed[actionType]=true;
+
+  const parts=[];
+  if (baseAccuracy) parts.push(`+${baseAccuracy} acc`);
+  if (actionBonus)  parts.push(`+${actionBonus}`);
+  if (alienPenalty) parts.push(`−${alienPenalty} fast`);
+  const modStr=parts.length?` (${parts.join(', ')})`:'' ;
+
+  document.getElementById('dieBox').innerHTML=`
+    <div class="die-face">${DIE_FACES[rawRoll-1]}</div>
+    <div class="die-info">
+      ${rawRoll}${modStr} → <strong>${effRoll}</strong> vs ${dist}+<br>
+      <span class="${hit?'result-hit':'result-miss'}">${hit?'✓ HIT!':'✗ MISS'}</span>
+    </div>`;
+
+  const item = pickItem(actionType);
+
+  if (hit) {
+    const splashTargets=(actionType==='splash')?adjCells(r,c):[];
+    applyDamage(r,c,dmg);
+    for (const [ar,ac] of splashTargets) if (grid[ar][ac]) applyDamage(ar,ac,1);
+    const splashNote=splashTargets.length?' +splash':'';
+    addLog(`💥 ${item} hit A${c+1}R${r+1} −${dmg}hp${splashNote} (${rawRoll}→${effRoll}≥${dist})`, 'hit-log');
+    scheduleFlash(r,c,'flash-hit');
+    playHitSound(actionType);
+  } else {
+    addLog(`❌ ${item} missed A${c+1}R${r+1} (${rawRoll}→${effRoll}<${dist})`, 'miss-log');
+    scheduleFlash(r,c,'flash-miss');
+    playMissSound();
+  }
+
+  render();
+  if (isOver||shopOpen||pendingShop) return;
+  const anyAliens=grid.some(row=>row.some(c=>c));
+  if (!anyAliens||actionsLeft<=0) scheduleAdvance(!anyAliens?500:1100);
+}
+
+function scheduleAdvance(delay) {
+  const stamp=turn; advanceLock=stamp;
+  setTimeout(()=>{ if(advanceLock===stamp&&!isOver&&!shopOpen&&!pendingShop) advanceTurn(); },delay);
+}
+
+function advanceTurn() {
+  if (isOver||shopOpen||pendingShop) return;
+  turn++;
+  addLog(`— Turn ${turn} —`,'turn-log');
+  document.getElementById('dieBox').innerHTML='<div class="no-throw">— no throw yet —</div>';
+  doAlienPhase(false);
+  if (!isOver&&!shopOpen) render();
+}
+
+function actionLabel(t) { return {throw:'Throw',heavy:'Heavy',streamlined:'Stream',splash:'Splash'}[t]||'Throw'; }
+
+function adjCells(r,c) {
+  const out=[];
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) {
+    if(!dr&&!dc) continue;
+    const nr=r+dr,nc=c+dc;
+    if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) out.push([nr,nc]);
+  }
+  return out;
+}
+
+// ================================================================
+// SHOP
+// ================================================================
+function shopUpgrades() {
+  const dmgBonus=baseDamage-1;
+  return [
+    {id:'heavy',       icon:'🧱',name:'Throw Heavy Item',        desc:`${baseDamage+1} damage · once per turn`,               cost:5,  once:true, owned:hasHeavy},
+    {id:'streamlined', icon:'🎯',name:'Throw Streamlined Item',  desc:`${baseDamage} damage · +2 to accuracy · once per turn`,cost:5,  once:true, owned:hasStreamlined},
+    {id:'splash',      icon:'💦',name:'Throw Splashable Item',   desc:`${baseDamage} damage + 1 splash · once per turn`,      cost:5,  once:true, owned:hasSplash},
+    {id:'rollFirst',     icon:'🎲',name:'Roll Accuracy Before Choosing Target', desc:`See die roll before picking a target`,         cost:20, once:true, owned:hasRollFirst},
+    {id:'fourthAction',  icon:'⚡',name:'Gain Fourth Action Per Turn',          desc:`+1 action every turn`,                         cost:10, once:true, owned:hasFourthAction},
+    {id:'damage',        icon:'⚔️',name:'Increase Base Damage',                 desc:`+1 to all throws (currently +${dmgBonus})`,    cost:20, once:false,owned:false},
+    {id:'accuracy',      icon:'🎱',name:'Increase Base Accuracy',               desc:`+1 to all rolls (currently +${baseAccuracy})`, cost:10, once:false,owned:false},
+  ];
+}
+
+function buyUpgrade(id) {
+  const upg=shopUpgrades().find(u=>u.id===id);
+  if(!upg||credits<upg.cost||upg.owned) return;
+  credits-=upg.cost;
+  if      (id==='heavy')        hasHeavy=true;
+  else if (id==='streamlined')  hasStreamlined=true;
+  else if (id==='splash')       hasSplash=true;
+  else if (id==='rollFirst')    hasRollFirst=true;
+  else if (id==='fourthAction') hasFourthAction=true;
+  else if (id==='damage')       baseDamage++;
+  else if (id==='accuracy')     baseAccuracy++;
+  addLog(`🛍️ Bought: ${upg.name} (−${upg.cost} cr)`,'shop-log');
+  renderShop();
+}
+
+function closeShop() {
+  shopOpen=false; render();
+  if (actionsLeft<=0) scheduleAdvance(600);
+  else if (!grid.some(row=>row.some(c=>c))) scheduleAdvance(500);
+}
+
+function renderShop() {
+  const upgs=shopUpgrades();
+  const html=upgs.map(u=>{
+    const canBuy=credits>=u.cost&&!u.owned;
+    return `<div class="shop-item ${u.owned?'owned':''} ${!canBuy&&!u.owned?'no-cash':''}">
+      <div class="shop-item-icon">${u.icon}</div>
+      <div class="shop-item-body"><div class="shop-item-name">${u.name}</div><div class="shop-item-desc">${u.desc}</div></div>
+      ${u.owned?'<span class="owned-badge">✓ Owned</span>':`<button class="buy-btn" onclick="buyUpgrade('${u.id}')" ${canBuy?'':'disabled'}>${u.cost} cr</button>`}
+    </div>`;
+  }).join('');
+  document.getElementById('shopOverlay').innerHTML=`
+    <div class="shop-panel">
+      <div class="shop-header"><div class="shop-title">🛍️ UPGRADE SHOP</div><div class="shop-wave">Wave ${wave} · Boss Defeated!</div></div>
+      <div class="shop-credits-bar">Credits: <strong>${credits}</strong></div>
+      <div class="shop-items">${html}</div>
+      <button class="shop-close-btn" onclick="closeShop()">✓ Done Shopping — Continue</button>
+    </div>`;
+}
+
+// ================================================================
+// GAME OVER
+// ================================================================
+function triggerGameOver() {
+  isOver=true; stopMusic();
+  document.getElementById('finalTurn').textContent=turn;
+  document.getElementById('finalWave').textContent=wave;
+  document.getElementById('finalScore').textContent=score;
+  document.getElementById('goOverlay').classList.add('show');
+  renderGameOverHS();
+}
+
+// ================================================================
+// HIGH SCORE SYSTEM
+// ================================================================
+const HS_KEY = 'wallyWorldHighScores';
+const HS_MAX = 10;
+
+function getHighScores() {
+  try { const r=localStorage.getItem(HS_KEY); return r?JSON.parse(r):[]; } catch(e){ return []; }
+}
+function saveHighScores(scores) {
+  try { localStorage.setItem(HS_KEY, JSON.stringify(scores)); } catch(e){}
+}
+function qualifiesForHighScore(t) {
+  const s=getHighScores();
+  return s.length<HS_MAX || t>s[s.length-1].turn;
+}
+function addHighScore(name, t, w, aliens) {
+  const scores=getHighScores();
+  scores.push({name, turn:t, wave:w, aliens, date:new Date().toLocaleDateString()});
+  scores.sort((a,b)=>b.turn-a.turn||b.aliens-a.aliens);
+  scores.splice(HS_MAX);
+  saveHighScores(scores);
+  return scores;
+}
+function hsEscape(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function renderHighScoreTable(highlightTurn) {
+  const scores=getHighScores();
+  if (!scores.length) return `<div style="color:#bbb;font-size:0.72rem;text-align:center;padding:12px 0">No scores yet — you're the first!</div>`;
+  const rows=scores.map((s,i)=>{
+    const hl=highlightTurn!==null&&s.turn===highlightTurn&&s.name===document.getElementById('hsNameInput')?.value.trim();
+    return `<tr style="${hl?'background:#fff8e0;':''}">
+      <td style="padding:5px 8px;color:#999;width:28px">${i+1}</td>
+      <td style="padding:5px 8px;color:#333;font-weight:${hl?'bold':'normal'}">${hsEscape(s.name)}</td>
+      <td style="padding:5px 8px;color:#c44;text-align:center;font-weight:bold">${s.turn}</td>
+      <td style="padding:5px 8px;color:#888;text-align:center">Wave ${s.wave}</td>
+      <td style="padding:5px 8px;color:#888;text-align:center">${s.aliens} 👽</td>
+    </tr>`;
+  }).join('');
+  return `<table style="width:100%;border-collapse:collapse;font-size:0.72rem;font-family:'Courier New',monospace">
+    <thead><tr style="border-bottom:1px solid #eee">
+      <th style="padding:4px 8px;color:#bbb;font-weight:normal;text-align:left">#</th>
+      <th style="padding:4px 8px;color:#bbb;font-weight:normal;text-align:left">Name</th>
+      <th style="padding:4px 8px;color:#bbb;font-weight:normal;text-align:center">Turn</th>
+      <th style="padding:4px 8px;color:#bbb;font-weight:normal;text-align:center">Wave</th>
+      <th style="padding:4px 8px;color:#bbb;font-weight:normal;text-align:center">Aliens</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderGameOverHS() {
+  const sec=document.getElementById('hsSection');
+  const qualifies=!hsSubmitted&&qualifiesForHighScore(turn);
+  let html=`<div style="max-width:420px;width:100%;display:flex;flex-direction:column;gap:10px">`;
+
+  if (qualifies) {
+    html+=`<div style="background:#fff;border:1.5px solid #c8a840;border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:0.82rem;color:#a67c00;font-weight:bold;margin-bottom:6px">🏆 You made the Top 10! (Turn ${turn})</div>
+      <div style="font-size:0.72rem;color:#777;margin-bottom:10px">Enter your name to save your score:</div>
+      <div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap">
+        <input id="hsNameInput" type="text" maxlength="16" placeholder="YourName"
+          style="padding:6px 11px;border:1.5px solid #ccc;border-radius:6px;font-family:'Courier New',monospace;font-size:0.8rem;width:150px;text-align:center;outline:none"
+          oninput="document.getElementById('hsError').textContent=''"
+          onkeydown="if(event.key==='Enter')submitHighScore()">
+        <button onclick="submitHighScore()"
+          style="padding:7px 16px;background:#1a6a2a;border:none;border-radius:6px;color:#fff;font-family:'Courier New',monospace;font-size:0.78rem;cursor:pointer;letter-spacing:0.5px">
+          Save ✓
+        </button>
+      </div>
+      <div id="hsError" style="color:#c44;font-size:0.68rem;margin-top:5px;min-height:14px"></div>
+    </div>`;
+  }
+
+  html+=`<div style="background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:12px">
+    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:2px;color:#bbb;margin-bottom:8px;text-align:center">🏆 All-Time Top 10</div>
+    ${renderHighScoreTable(hsSubmitted?turn:null)}
+  </div></div>`;
+
+  sec.innerHTML=html;
+  if (qualifies) setTimeout(()=>{ const inp=document.getElementById('hsNameInput'); if(inp) inp.focus(); },50);
+}
+
+function submitHighScore() {
+  const inp=document.getElementById('hsNameInput');
+  if (!inp) return;
+  const name=inp.value.trim();
+  if (!name) { document.getElementById('hsError').textContent='Please enter a name.'; return; }
+  if (!/^[a-zA-Z0-9]+$/.test(name)) { document.getElementById('hsError').textContent='Letters and numbers only, no spaces.'; return; }
+  hsSubmitted=true;
+  addHighScore(name, turn, wave, score);
+  renderGameOverHS();
+}
+
+// ================================================================
+// MODALS
+// ================================================================
+function openHelp()     { document.getElementById('helpModal').classList.add('show'); }
+function closeHelp()    { document.getElementById('helpModal').classList.remove('show'); }
+function openSettings() { document.getElementById('settingsModal').classList.add('show'); }
+function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
+
+// ================================================================
+// RENDER
+// ================================================================
+function render() {
+  if (shopOpen) { document.getElementById('shopOverlay').classList.add('show'); renderShop(); }
+  else           document.getElementById('shopOverlay').classList.remove('show');
+  renderGrid(); renderPlayer(); renderSidebar();
+  document.getElementById('turnNum').textContent    = turn;
+  document.getElementById('waveNum').textContent    = wave;
+  document.getElementById('scoreNum').textContent   = score;
+  document.getElementById('creditsNum').textContent = credits;
+}
+
+const ALIEN_ICONS = {basic:'👽', teleport:'🤖', fast:'🏃‍♂️‍➡️', horde:'🐛', boss:'👾'};
+
+function heartsHTML(hp, maxHp) {
+  if (maxHp<=6) {
+    let s='';
+    for(let i=0;i<maxHp;i++) s+=`<span class="heart ${i<hp?'full':'empty'}">♥</span>`;
+    return `<div class="hp-hearts">${s}</div>`;
+  }
+  return `<div class="hp-hearts"><span class="heart full">♥</span><span class="hp-count">×${hp}/${maxHp}</span></div>`;
+}
+
+function renderGrid() {
+  const el=document.getElementById('gridEl'); el.innerHTML='';
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) {
+    const div=document.createElement('div'); div.className='cell';
+    const alien=grid[r][c];
+    if (alien) {
+      div.classList.add(`alien-${alien.type}`);
+      if (alien.hp<alien.maxHp) div.classList.add('alien-hurt');
+      div.innerHTML=`<span class="alien-icon">${ALIEN_ICONS[alien.type]||'👽'}</span>${heartsHTML(alien.hp,alien.maxHp)}`;
+      if (selectingAction) {
+        div.classList.add('targetable');
+        const row=r,col=c;
+        div.addEventListener('click',()=>executeAction(row,col));
+      }
+    } else if (r===ROWS-1) { div.innerHTML='<span style="opacity:0.06;font-size:0.9rem">🛒</span>'; }
+    el.appendChild(div);
+  }
+}
+
+function renderPlayer() {
+  const t=document.getElementById('playerTrack'); t.innerHTML='';
+  for(let c=0;c<COLS;c++) {
+    const s=document.createElement('div');
+    s.className='player-slot '+(c===1?'active':'empty');
+    if(c===1) s.innerHTML='🧑‍🦰';
+    t.appendChild(s);
+  }
+}
+
+function renderSidebar() {
+  const pe=document.getElementById('pipsEl'); pe.innerHTML='';
+  const maxActions=ACTIONS_PER_TURN+(hasFourthAction?1:0);
+  for(let i=0;i<maxActions;i++) {
+    const p=document.createElement('div'); p.className='pip '+(i<actionsLeft?'on':'off'); pe.appendChild(p);
+  }
+  const lbl=document.createElement('span'); lbl.className='pip-label'; lbl.textContent=`${actionsLeft} left`; pe.appendChild(lbl);
+
+  document.getElementById('throwSub').textContent       = `${baseDamage} dmg · unlimited/turn`;
+  document.getElementById('heavySub').textContent       = `${baseDamage+1} dmg · once/turn`;
+  document.getElementById('streamlinedSub').textContent = `${baseDamage} dmg · +2 acc · once/turn`;
+  document.getElementById('splashSub').textContent      = `${baseDamage} dmg + 1 splash · once/turn`;
+
+  const canAct=!isOver&&!shopOpen&&!pendingShop&&!selectingAction&&actionsLeft>0;
+  document.getElementById('throwBtn').disabled       = !canAct;
+  document.getElementById('heavyBtn').style.display       = hasHeavy       ?'':'none';
+  document.getElementById('streamlinedBtn').style.display = hasStreamlined  ?'':'none';
+  document.getElementById('splashBtn').style.display      = hasSplash       ?'':'none';
+  document.getElementById('rollFirstBadge').style.display = hasRollFirst    ?'':'none';
+  document.getElementById('heavyBtn').disabled       = !canAct||abilityUsed.heavy;
+  document.getElementById('streamlinedBtn').disabled = !canAct||abilityUsed.streamlined;
+  document.getElementById('splashBtn').disabled      = !canAct||abilityUsed.splash;
+  ['heavy','streamlined','splash'].forEach(id=>{
+    document.getElementById(`${id}Btn`).classList.toggle('used-up',!!abilityUsed[id]);
+  });
+  document.getElementById('endTurnBtn').disabled = isOver||shopOpen||pendingShop||actionsLeft<=0;
+  document.getElementById('phaseBadge').textContent =
+    isOver?'Game Over': shopOpen?'🛍️ Shop Open': `Turn ${turn} · Your Move`;
+}
+
+// ================================================================
+// HELPERS
+// ================================================================
+function addLog(msg, cls) {
+  const box=document.getElementById('logBox');
+  const l=document.createElement('div'); l.className='log-line '+(cls||''); l.textContent=msg;
+  box.insertBefore(l,box.firstChild);
+}
+
+function scheduleFlash(r,c,cls) {
+  requestAnimationFrame(()=>{
+    const cells=document.querySelectorAll('#gridEl .cell'), idx=r*COLS+c;
+    if(cells[idx]){ cells[idx].classList.add(cls); setTimeout(()=>cells[idx].classList.remove(cls),420); }
+  });
+}
+
+// ================================================================
+// AUDIO ENGINE
+// ================================================================
+let _ctx        = null;
+let musicTimer  = null;
+let musicStep   = 0;
+let musicTime   = 0;
+let musicEnabled = true;
+let sfxEnabled   = true;
+
+function getCtx() {
+  if (!_ctx) _ctx = new (window.AudioContext||window.webkitAudioContext)();
+  return _ctx;
+}
+
+function setMusic(on) {
+  musicEnabled = on;
+  if (on)  { if (!musicTimer) startMusic(); }
+  else     { stopMusic(); }
+}
+
+function setSfx(on) { sfxEnabled = on; }
+
+// --- Sound Effects ---
+function playMissSound() {
+  if (!sfxEnabled) return;
+  try {
+    const ctx=getCtx(), t=ctx.currentTime;
+    const osc=ctx.createOscillator(), g=ctx.createGain();
+    osc.type='sine'; osc.frequency.setValueAtTime(700,t); osc.frequency.exponentialRampToValueAtTime(180,t+0.28);
+    g.gain.setValueAtTime(0.12,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+    osc.connect(g); g.connect(ctx.destination); osc.start(t); osc.stop(t+0.3);
+    const buf=ctx.createBuffer(1,ctx.sampleRate*0.2,ctx.sampleRate);
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.3;
+    const ns=ctx.createBufferSource(),nf=ctx.createBiquadFilter(),ng=ctx.createGain();
+    ns.buffer=buf; nf.type='highpass'; nf.frequency.value=2000;
+    ng.gain.setValueAtTime(0.08,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+    ns.connect(nf); nf.connect(ng); ng.connect(ctx.destination); ns.start(t);
+  } catch(e){}
+}
+
+function playHitSound(type) {
+  if (!sfxEnabled) return;
+  try {
+    if      (type==='heavy')      playCrunchSound();
+    else if (type==='streamlined') playThunkSound();
+    else if (type==='splash')      playSplatSound();
+    else                           playSmackSound();
+  } catch(e){}
+}
+
+function playSmackSound() {
+  const ctx=getCtx(),t=ctx.currentTime;
+  const osc=ctx.createOscillator(),og=ctx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(220,t); osc.frequency.exponentialRampToValueAtTime(55,t+0.12);
+  og.gain.setValueAtTime(0.35,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.14);
+  osc.connect(og); og.connect(ctx.destination); osc.start(t); osc.stop(t+0.15);
+  const buf=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const ns=ctx.createBufferSource(),nf=ctx.createBiquadFilter(),ng=ctx.createGain();
+  ns.buffer=buf; nf.type='bandpass'; nf.frequency.value=900; nf.Q.value=1;
+  ng.gain.setValueAtTime(0.4,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+  ns.connect(nf); nf.connect(ng); ng.connect(ctx.destination); ns.start(t);
+}
+
+function playCrunchSound() {
+  const ctx=getCtx(),t=ctx.currentTime;
+  const osc=ctx.createOscillator(),og=ctx.createGain();
+  osc.type='triangle'; osc.frequency.setValueAtTime(140,t); osc.frequency.exponentialRampToValueAtTime(28,t+0.22);
+  og.gain.setValueAtTime(0.55,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.24);
+  osc.connect(og); og.connect(ctx.destination); osc.start(t); osc.stop(t+0.25);
+  const buf=ctx.createBuffer(1,ctx.sampleRate*0.25,ctx.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const ns=ctx.createBufferSource(),nf=ctx.createBiquadFilter(),ng=ctx.createGain();
+  ns.buffer=buf; nf.type='lowpass'; nf.frequency.value=500;
+  ng.gain.setValueAtTime(0.5,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+  ns.connect(nf); nf.connect(ng); ng.connect(ctx.destination); ns.start(t);
+}
+
+function playThunkSound() {
+  const ctx=getCtx(),t=ctx.currentTime;
+  const osc=ctx.createOscillator(),og=ctx.createGain();
+  osc.type='square'; osc.frequency.setValueAtTime(380,t); osc.frequency.exponentialRampToValueAtTime(130,t+0.16);
+  og.gain.setValueAtTime(0.18,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+  osc.connect(og); og.connect(ctx.destination); osc.start(t); osc.stop(t+0.2);
+  const osc2=ctx.createOscillator(),og2=ctx.createGain();
+  osc2.type='sine'; osc2.frequency.value=900;
+  og2.gain.setValueAtTime(0.12,t); og2.gain.exponentialRampToValueAtTime(0.001,t+0.04);
+  osc2.connect(og2); og2.connect(ctx.destination); osc2.start(t); osc2.stop(t+0.05);
+}
+
+function playSplatSound() {
+  const ctx=getCtx(),t=ctx.currentTime;
+  for(let i=0;i<3;i++) {
+    const delay=i*0.05;
+    const buf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*0.07),ctx.sampleRate);
+    const d=buf.getChannelData(0); for(let j=0;j<d.length;j++) d[j]=Math.random()*2-1;
+    const ns=ctx.createBufferSource(),nf=ctx.createBiquadFilter(),ng=ctx.createGain();
+    ns.buffer=buf; nf.type='bandpass'; nf.frequency.value=600-i*80; nf.Q.value=3;
+    ng.gain.setValueAtTime(0.32-i*0.06,t+delay); ng.gain.exponentialRampToValueAtTime(0.001,t+delay+0.08);
+    ns.connect(nf); nf.connect(ng); ng.connect(ctx.destination); ns.start(t+delay);
+  }
+  const osc=ctx.createOscillator(),og=ctx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(180,t); osc.frequency.exponentialRampToValueAtTime(60,t+0.18);
+  og.gain.setValueAtTime(0.28,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+  osc.connect(og); og.connect(ctx.destination); osc.start(t); osc.stop(t+0.2);
+}
+
+// --- Background Music ---
+const BPM        = 158;
+const S16        = 60/BPM/4;   // ~0.095s per 16th note
+const LOOK_AHEAD = 0.25;
+const SCHED_MS   = 80;
+
+// 32-step A-minor arcade melody
+const MEL = [
+  659,0,784,0,880,784,659,523,
+  587,0,659,0,784,659,587,  0,
+  523,0,659,0,784,  0,880,784,
+  659,587,523,0,440,  0,659,  0,
+];
+const BAS = [
+  220,0,0,0, 220,0,0,0,
+  147,0,0,0, 165,0,0,0,
+  131,0,0,0, 131,0,0,0,
+  147,0,0,0, 220,0,0,0,
+];
+
+function schedNote(freq, type, vol, time, dur, filterHz) {
+  if (!freq) return;
+  const ctx=getCtx();
+  const osc=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter();
+  osc.type=type; osc.frequency.value=freq;
+  f.type='lowpass'; f.frequency.value=filterHz;
+  g.gain.setValueAtTime(0,time);
+  g.gain.linearRampToValueAtTime(vol,time+0.005);
+  g.gain.setValueAtTime(vol,time+dur*0.75);
+  g.gain.exponentialRampToValueAtTime(0.0001,time+dur);
+  osc.connect(f); f.connect(g); g.connect(ctx.destination);
+  osc.start(time); osc.stop(time+dur+0.01);
+}
+
+function runMusicScheduler() {
+  if (musicTimer===null) return;
+  const ctx=getCtx();
+  // If context is suspended (autoplay policy), don't advance musicTime
+  if (ctx.state!=='running') {
+    musicTimer=setTimeout(runMusicScheduler,SCHED_MS);
+    return;
+  }
+  // Resync if musicTime has fallen behind (e.g. after context was suspended)
+  if (musicTime < ctx.currentTime) {
+    musicTime = ctx.currentTime+0.1;
+  }
+  const until=ctx.currentTime+LOOK_AHEAD;
+  while (musicTime<until) {
+    const s=musicStep%MEL.length;
+    if (musicEnabled) {
+      schedNote(MEL[s],'square',  0.07,musicTime,S16*0.8,3200);
+      schedNote(BAS[s],'triangle',0.06,musicTime,S16*3.5,600);
+    }
+    musicTime+=S16;
+    musicStep++;
+  }
+  musicTimer=setTimeout(runMusicScheduler,SCHED_MS);
+}
+
+function startMusic() {
+  if (musicTimer!==null) return; // already running
+  musicStep=0;
+  musicTime=(getCtx().currentTime||0)+0.15;
+  musicTimer=setTimeout(runMusicScheduler,0);
+}
+
+function stopMusic() {
+  if (musicTimer) { clearTimeout(musicTimer); musicTimer=null; }
+}
+
+// ================================================================
+// AUDIO AUTOSTART
+// Try immediately; fall back to first user interaction for browsers
+// that block autoplay before a gesture.
+// ================================================================
+(function() {
+  try {
+    _ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const tryResume = () => {
+      if (_ctx.state!=='running') _ctx.resume().catch(()=>{});
+    };
+    // One-time listeners to resume on first interaction
+    const onInteract = () => {
+      tryResume();
+      document.removeEventListener('click',    onInteract, true);
+      document.removeEventListener('keydown',  onInteract, true);
+      document.removeEventListener('touchstart',onInteract,true);
+    };
+    document.addEventListener('click',    onInteract, true);
+    document.addEventListener('keydown',  onInteract, true);
+    document.addEventListener('touchstart',onInteract,true);
+    // Try immediately in case browser allows it
+    tryResume();
+  } catch(e) {}
+  initGame();
+})();
+</script>
+</body>
+</html>
